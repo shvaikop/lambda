@@ -13,7 +13,7 @@ data LamExpr = Var String
 
 lamExprParse :: Parser LamExpr
 lamExprParse = do
-  exprs <- many1 (spaces *> parenParse <|> spaces *> applParse <|> spaces *> abstrParse)
+  exprs <- many1 (spaces *> (parenParse <|> applParse <|> abstrParse))
   return (foldl1 Appl exprs)
 
 -- parses a variable made up of a single character
@@ -31,7 +31,6 @@ abstrParse = do
     var <- letter
     char '.'
     body <- lamExprParse
-    -- spaces
     traceM $ "abstrParse: " ++ [var]
     return (Abstr [var] body)
 
@@ -40,10 +39,8 @@ parenParse :: Parser LamExpr
 parenParse = do
     spaces
     char '('
-    spaces
     traceM "entered parenParse"
-    expr <- lamExprParse
-    spaces
+    expr <- lamExprParse <* spaces
     char ')'
     spaces
     traceM ("parenParse " ++ show expr)
