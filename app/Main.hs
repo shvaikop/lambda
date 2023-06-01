@@ -13,41 +13,47 @@ data LamExpr = Var String
 
 lamExprParse :: Parser LamExpr
 lamExprParse = do
-  exprs <- many1 (parenParse <|> applParse <|> abstrParse)
+  exprs <- many1 (spaces *> parenParse <|> spaces *> applParse <|> spaces *> abstrParse)
   return (foldl1 Appl exprs)
 
--- parses and returns a String made up of alphabetic characters
+-- parses a variable made up of a single character
 varParse :: Parser LamExpr
 varParse = do 
     var <- letter
-    -- traceM $ "varParse: " ++ [var]
+    traceM $ "varParse: " ++ [var]
     return (Var [var])
 
 -- parses abstractions, single char variable names for now
 abstrParse :: Parser LamExpr
 abstrParse = do 
-    -- traceM "entered abstrParse"
+    traceM "entered abstrParse"
     char '\\' 
     var <- letter
     char '.'
     body <- lamExprParse
-    -- traceM $ "abstrParse: " ++ [var]
+    -- spaces
+    traceM $ "abstrParse: " ++ [var]
     return (Abstr [var] body)
 
 -- parses parentheses and returns expression inside them
 parenParse :: Parser LamExpr
 parenParse = do
+    spaces
     char '('
-    -- traceM "entered parenParse"
+    spaces
+    traceM "entered parenParse"
     expr <- lamExprParse
+    spaces
     char ')'
-    -- traceM ("parenParse " ++ show expr)
+    spaces
+    traceM ("parenParse " ++ show expr)
     return expr
 
 applParse :: Parser LamExpr
 applParse = do
-  appls <- many1 (varParse <|> parenParse)
---   traceM ("applParse: " ++ show appls)
+  appls <- many1 ( spaces *> (varParse <|> parenParse) <* spaces )
+  spaces
+  traceM ("applParse: " ++ show appls)
   return (foldl1 Appl appls)
 
 
@@ -65,3 +71,5 @@ test2 = parse lamExprParse "error" "\\f.\\x.f(fx)"
 test3 = parse lamExprParse "error" "((\\x.x)((\\y.y)(\\y.y)))"
 
 test4 = parse lamExprParse "error" "(\\x.x)((\\y.y)(\\y.y))"
+
+test5 = parse lamExprParse "error" "             (\\x.x) ((\\y.y  ) (  \\y.y)  )"
