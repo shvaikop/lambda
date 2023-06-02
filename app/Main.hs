@@ -5,16 +5,20 @@ module Main where
 import Text.Parsec
 import Text.Parsec.String
 import Debug.Trace
-
-data LamAssignment = Assign String LamExpr
-    deriving (Show, Eq)
+import System.IO
+-- data LamAssignment = Assign String LamExpr
+--     deriving (Show, Eq)
 
 data LamExpr = Var String
              | Abstr String LamExpr
-             | Appl LamExpr LamExpr
+             | Appl LamExpr LamExpr     
+             | Assign String LamExpr    -- assignment 
              deriving(Show, Eq)
 
-lamAssignmentParse :: Parser LamAssignment
+parseTop :: Parser LamExpr
+parseTop = lamAssignmentParse <|> lamExprParse
+
+lamAssignmentParse :: Parser LamExpr
 lamAssignmentParse = do
     name <- (many1 letter) <* spaces
     char '='
@@ -65,22 +69,44 @@ applParse = do
   return (foldl1 Appl appls)
 
 
-
+mainLoop :: IO ()
+mainLoop = do
+    putStr ">>> "
+    hFlush stdout
+    input <- getLine
+    if input == "q" then putStrLn "Exiting"
+    else do 
+        case parse parseTop "error" input of
+            Right (Assign name expr) -> do
+                putStrLn "Assignment"
+                putStrLn (name ++ (show expr))
+            Right (Var v) -> print (Var v)
+            Right (Abstr v body) -> print (Abstr v body)
+            Right (Appl l r) -> print (Appl l r)
+            Left err -> putStrLn "Error while parsing"
+        mainLoop
+        
 
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main = do
+    putStrLn "Welcome to Lambda Calculus Interpreter"
+    putStrLn "Enter 'q' to exit"
+    mainLoop
+    
+
+
 
 
 -----  TESTS  -----
 -------------------------------------------------------------------
-test1 = parse lamExprParse "error" "\\f.\\x.fx"
+test1 = parse parseTop "error" "\\f.\\x.fx"
 
-test2 = parse lamExprParse "error" "\\f.\\x.f(fx)"
+test2 = parse parseTop "error" "\\f.\\x.f(fx)"
 
-test3 = parse lamExprParse "error" "((\\x.x)((\\y.y)(\\y.y)))"
+test3 = parse parseTop "error" "((\\x.x)((\\y.y)(\\y.y)))"
 
-test4 = parse lamExprParse "error" "(\\x.x)((\\y.y)(\\y.y))"
+test4 = parse parseTop "error" "(\\x.x)((\\y.y)(\\y.y))"
 
-test5 = parse lamExprParse "error" "             (\\x.x) ((\\y.y  ) (  \\y.y)  )"
+test5 = parse parseTop "error" "             (\\x.x) ((\\y.y  ) (  \\y.y)  )"
 
-test6 = parse lamExprParse "error" "  (\\x.x ) (  (\\y.y)   (\\y.y  )  )  "
+test6 = parse parseTop "error" "  (\\x.x ) (  (\\y.y)   (\\y.y  )  )  "
