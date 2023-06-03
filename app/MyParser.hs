@@ -26,8 +26,11 @@ data LamExpr = Var VarId
              deriving(Show, Eq)
 
 -- parses a char, skipping spaces before and after
-sym :: Char -> Parser Char
-sym c = spaces *> char c <* spaces
+symChar :: Char -> Parser Char
+symChar c = spaces *> char c <* spaces
+
+symLetter :: Parser Char
+symLetter = spaces *> letter <* spaces
 
 -- pubic function that main will call to parse
 parseEntry :: String -> Either ParseError Statement
@@ -41,7 +44,7 @@ statementAssignParse :: Parser Statement
 statementAssignParse = do
     -- traceM "entered statementAssignParse"
     name <- many1 letter
-    sym '='
+    symChar '='
     expr <- lamExprParse
     return (Assign name expr)
 
@@ -60,7 +63,7 @@ lamExprParse = do
 -- parses a variable made up of a single character
 varParse :: Parser LamExpr
 varParse = do
-    var <- letter <* spaces
+    var <- symLetter
     -- traceM $ "varParse: " ++ [var]
     return (Var [var])
 
@@ -78,16 +81,16 @@ abstrParse = do
 -- parses parentheses and returns expression inside them
 parenParse :: Parser LamExpr
 parenParse = do
-    sym '('
+    symChar '('
     -- traceM "entered parenParse"
     expr <- lamExprParse
-    sym ')'
+    symChar ')'
     -- traceM ("parenParse " ++ show expr)
     return expr
 
 applParse :: Parser LamExpr
 applParse = do
-    appls <- many1 ( spaces *> (varParse <|> parenParse) <* spaces )
+    appls <- many1 (varParse <|> parenParse)
     -- traceM ("applParse: " ++ show appls)
     return (foldl1 Appl appls)
 
