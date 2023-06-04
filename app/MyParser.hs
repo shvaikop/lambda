@@ -10,7 +10,7 @@ module MyParser
     ) where
 
 import Text.Parsec
-import Text.Parsec.String
+import Text.Parsec.String ( Parser )
 import Debug.Trace
 import System.IO
 
@@ -98,6 +98,9 @@ applParse = do
     appls <- many1 (varParse <|> parenParse)
     -- traceM ("applParse: " ++ show appls)
     return (foldl1 Appl appls)
+    
+
+--------------------------------------------------------------------
 
 -- returns a set of all the free variables in a LamExpr
 freeVars :: LamExpr -> Set VarId
@@ -111,17 +114,44 @@ allVars (Var var) = singleton var
 allVars (Appl left right) = allVars left `union` allVars right
 allVars (Abstr var expr) = singleton var `union` allVars expr
 
+-- Generates an infinite list of strings with the following pattern
+-- a,...,b,ab,...,az,ba,.....
+varList :: [VarId]
+varList = [c : suf | len <- [0..], c <- ['a'..'z'], suf <- varListHelp len]
+    where varListHelp len 
+            | len == 0 = [""]
+            | otherwise = [c : suf| c <- ['a'..'z'], suf <- varListHelp (len - 1)]
+
+
+-- substitution: subst x e expr means, in expr substitute e instead of variable x
+subst :: VarId -> LamExpr -> LamExpr -> LamExpr 
+subst x e (Var var)
+    | x == var = e
+    | otherwise = Var var
+
+subst x e (Appl left right) = Appl (subst x e left) (subst x e right)
+
+subst x e (Abstr var expr)
+    | var == x = Abstr var expr -- abstraction binds the variable to be replaced
+    | otherwise = Abstr var (subst x e expr)    -- NOT HANDLING CAPTURES
+        where freeIn_e = freeVars e
+              allIn_e = allVars e
+
+
+
 
 
 ---  TESTS  -----
 -----------------------------------------------------------------
 
 -- testing freeVars
-expr1 = parse lamExprParse "error" "\\x.x y"
-expr2 = parse lamExprParse "error" "\\f.\\x. w h"
-expr3 = parse lamExprParse "error" "(\\x.x)((\\y.y)(\\w.g))"
+expr1 = parse lamExprParse "error" "\\a.a b"
+expr2 = parse lamExprParse "error" "\\c.\\d. w h"
+expr3 = parse lamExprParse "error" "(\\f.f)((\\g.g)(\\k.g))"
 free1 (Right expr) = freeVars expr
 all1 (Right expr) = allVars expr
+
+substTest var (Right e) (Right eMain) = subst var e eMain
 
 
 
