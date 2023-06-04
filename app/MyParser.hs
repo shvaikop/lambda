@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use <$>" #-}
+{-# HLINT ignore "Eta reduce" #-}
 module MyParser
     ( VarId
     , ExprName
@@ -10,6 +13,8 @@ import Text.Parsec
 import Text.Parsec.String
 import Debug.Trace
 import System.IO
+
+import Data.Set
 
 type VarId = String     -- variable names inside lambda expression
 type ExprName = String  -- lambda expression names
@@ -50,7 +55,7 @@ statementAssignParse = do
 
 -- <expression>
 statementExprParse :: Parser Statement
-statementExprParse = do 
+statementExprParse = do
     -- traceM "entered statementExprParse"
     expr <- lamExprParse
     return (Expr expr)
@@ -94,9 +99,32 @@ applParse = do
     -- traceM ("applParse: " ++ show appls)
     return (foldl1 Appl appls)
 
+-- returns a set of all the free variables in a LamExpr
+freeVars :: LamExpr -> Set VarId
+freeVars (Var var) = singleton var
+freeVars (Appl left right) = freeVars left `union` freeVars right
+freeVars (Abstr var expr) = freeVars expr \\ singleton var
+
+-- returns a set of all the variables in a LamExpr
+allVars :: LamExpr -> Set VarId
+allVars (Var var) = singleton var
+allVars (Appl left right) = allVars left `union` allVars right
+allVars (Abstr var expr) = singleton var `union` allVars expr
+
+
 
 ---  TESTS  -----
 -----------------------------------------------------------------
+
+-- testing freeVars
+expr1 = parse lamExprParse "error" "\\x.x y"
+expr2 = parse lamExprParse "error" "\\f.\\x. w h"
+expr3 = parse lamExprParse "error" "(\\x.x)((\\y.y)(\\w.g))"
+free1 (Right expr) = freeVars expr
+all1 (Right expr) = allVars expr
+
+
+
 test1 = parse parseTop "error" "\\f.\\x.fx"
 
 test2 = parse parseTop "error" "\\f.\\x.f(fx)"
