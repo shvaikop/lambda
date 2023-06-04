@@ -142,6 +142,21 @@ subst x e (Abstr var expr)
               freshVar = head (varList Data.List.\\ toList(allIn_e `union` allIn_expr)) -- new variable name for var (\var. ...)
               expr' = subst var (Var freshVar) expr -- replace all instances of var with freshVar
 
+betaReduceTop :: LamExpr -> LamExpr
+betaReduceTop expr = 
+    let reducedExpr = betaReduce expr
+    in if expr == reducedExpr
+        then expr
+        else betaReduce reducedExpr
+
+betaReduce :: LamExpr -> LamExpr
+betaReduce (Appl (Abstr x expr) e) = subst x e expr
+betaReduce (Appl left right) =
+    Appl (betaReduce left) (betaReduce right)
+betaReduce (Abstr x expr) = Abstr x (betaReduce expr)
+betaReduce expr = expr
+
+
 
 
 
