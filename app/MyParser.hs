@@ -15,6 +15,7 @@ import Debug.Trace
 import System.IO
 
 import Data.Set
+import Data.List ((\\))
 
 type VarId = String     -- variable names inside lambda expression
 type ExprName = String  -- lambda expression names
@@ -98,7 +99,7 @@ applParse = do
     appls <- many1 (varParse <|> parenParse)
     -- traceM ("applParse: " ++ show appls)
     return (foldl1 Appl appls)
-    
+
 
 --------------------------------------------------------------------
 
@@ -106,7 +107,7 @@ applParse = do
 freeVars :: LamExpr -> Set VarId
 freeVars (Var var) = singleton var
 freeVars (Appl left right) = freeVars left `union` freeVars right
-freeVars (Abstr var expr) = freeVars expr \\ singleton var
+freeVars (Abstr var expr) = freeVars expr Data.Set.\\ singleton var
 
 -- returns a set of all the variables in a LamExpr
 allVars :: LamExpr -> Set VarId
@@ -133,9 +134,13 @@ subst x e (Appl left right) = Appl (subst x e left) (subst x e right)
 
 subst x e (Abstr var expr)
     | var == x = Abstr var expr -- abstraction binds the variable to be replaced
-    | otherwise = Abstr var (subst x e expr)    -- NOT HANDLING CAPTURES
-        where freeIn_e = freeVars e
-              allIn_e = allVars e
+    | member var freeIn_e = Abstr freshVar (subst x e expr')  -- replace var with a fresh variable name, subsitute it for y everywhere in the expression
+    | not (member var freeIn_e) = Abstr var (subst x e expr)  
+        where freeIn_e = freeVars e -- set of free variables in e
+              allIn_e = allVars e   -- set of all variables in e
+              allIn_expr = allVars expr     -- set of all variables in expr
+              freshVar = head (varList Data.List.\\ toList(allIn_e `union` allIn_expr)) -- new variable name for var (\var. ...)
+              expr' = subst var (Var freshVar) expr -- replace all instances of var with freshVar
 
 
 
@@ -145,13 +150,15 @@ subst x e (Abstr var expr)
 -----------------------------------------------------------------
 
 -- testing freeVars
-expr1 = parse lamExprParse "error" "\\a.a b"
+expr1 = parse lamExprParse "error" "\\a.a k"
 expr2 = parse lamExprParse "error" "\\c.\\d. w h"
-expr3 = parse lamExprParse "error" "(\\f.f)((\\g.g)(\\k.g))"
+expr3 = parse lamExprParse "error" "(\\f.f)((\\g.g)(\\k.g k))"
 free1 (Right expr) = freeVars expr
 all1 (Right expr) = allVars expr
 
-substTest var (Right e) (Right eMain) = subst var e eMain
+expr4 = parse lamExprParse "error" ""
+
+substTest var (Right e) (Right eMain) = subst var e eMain   -- testing subst with substituting expr1 for "g" in expr3
 
 
 
