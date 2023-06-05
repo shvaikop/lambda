@@ -8,6 +8,7 @@ module MyParser
     , LamExpr(..)
     , parseEntry
     , betaReduceTop
+    , expandSubstsTop
     ) where
 
 import Text.Parsec
@@ -18,7 +19,7 @@ import System.IO
 import Data.Set
 import Data.Maybe
 import Data.List ((\\))
-import Data.Map (Map, empty, lookup, member, (!))
+import Data.Map (Map, empty, lookup, member, (!), insert)
 
 type VarId = String     -- variable names inside lambda expression
 type ExprName = String  -- lambda expression names
@@ -36,7 +37,19 @@ data LamExpr = Var VarId
              | ExprSubst VarId
              | Abstr VarId LamExpr
              | Appl LamExpr LamExpr
-             deriving(Show, Eq)
+             deriving(Eq)
+
+instance Show LamExpr where
+    show (Var varId) = varId
+    show (ExprSubst varId) = "$" ++ varId 
+    show (Abstr varId expr) = "\\" ++ varId ++ "." ++ show expr
+    show (Appl expr1 expr2) = applyParentheses (show expr1) ++ " " ++ applyParentheses (show expr2)
+        where
+            applyParentheses str = if needsParentheses expr1 expr2 then "(" ++ str ++ ")" else str
+            needsParentheses (Appl _ _) _ = True
+            needsParentheses _ (Appl _ _) = True
+            needsParentheses _ _ = False
+
 
 -- parses a char, skipping spaces before and after
 symChar :: Char -> Parser Char
@@ -70,7 +83,7 @@ statementExprParse = do
 
 lamExprParse :: Parser LamExpr
 lamExprParse = do
-  exprs <- many1 (spaces *> (parenParse <|> applParse <|> abstrParse <|> varParse))
+  exprs <- many1 (spaces *> (parenParse <|> applParse <|> abstrParse <|> varParse) <* spaces)
   return (foldl1 Appl exprs)
 
 -- parses a local (single char) variable or an expression name ($...)
@@ -90,6 +103,7 @@ exprSubstParse = do
     spaces
     char '$'
     var <- many1 letter
+    spaces
     return (ExprSubst var)
 
 -- parses abstractions, single char variable names for now
@@ -165,16 +179,19 @@ subst x e (Abstr var expr) sub_type
               freshVar = head (varList Data.List.\\ toList (allIn_e `union` allIn_expr)) -- new variable name for var (\var. ...)
               expr' = subst var (Var freshVar) expr sub_type -- replace all instances of var with freshVar
 
+
 -- expands all the ExprSubts in an expressions with their corresponding expressions
 -- returns Nothing if expression with some name does not exist
 expandSubstsTop :: Map ExprName LamExpr -> LamExpr -> Maybe LamExpr
 expandSubstsTop map expr
+    | all_expr_names == [] = Just expr
     | not doAllExist = Nothing
-    | otherwise = Just (expandSubsts map all_expr_names expr)
+    | otherwise = expandSubstsTop map expanded
         where all_expr_names = allExprSubsts expr []
               doAllExist = allExprsExist map all_expr_names
+              expanded = expandSubsts map all_expr_names expr
 
-              
+
 expandSubsts :: Map ExprName LamExpr -> [VarId] -> LamExpr -> LamExpr
 expandSubsts map [] expr = expr
 expandSubsts map (x:xs) expr = subst x e (expandSubsts map xs expr) ExprVar
@@ -193,11 +210,6 @@ allExprSubsts (ExprSubst x) ls = x:ls
 allExprsExist :: Map ExprName LamExpr -> [VarId] -> Bool
 allExprsExist map ls = and [Data.Map.member var map | var <- ls]
 
--- doesSubstOccur :: VarId -> LamExpr -> Bool
--- doesSubstOccur var (ExprSubst x) = x == var
--- doesSubstOccur var (Abstr x expr) = doesSubstOccur var expr
--- doesSubstOccur var (Appl left right) = doesSubstOccur var left || doesSubstOccur var right
--- doesSubstOccur var (Var x) = False
 
 -- Applies successive beta reduction in normal order
 betaReduceTop :: LamExpr -> LamExpr
@@ -241,43 +253,43 @@ betaReduce expr = expr
 -----------------------------------------------------------------
 
 -- testing freeVars
-expr1 = parse lamExprParse "error" "\\a.a k"
-expr2 = parse lamExprParse "error" "\\c.\\d. w h"
-expr3 = parse lamExprParse "error" "(\\f.f)((\\g.g)(\\k.g k))"
-free1 (Right expr) = freeVars expr
-all1 (Right expr) = allVars expr
+-- expr1 = parse lamExprParse "error" "\\a.a k"
+-- expr2 = parse lamExprParse "error" "\\c.\\d. w h"
+-- expr3 = parse lamExprParse "error" "(\\f.f)((\\g.g)(\\k.g k))"
+-- free1 (Right expr) = freeVars expr
+-- all1 (Right expr) = allVars expr
 
-expr4 = parse lamExprParse "error" "((\\x.x)((\\y.y)(\\y.y)))"
+-- expr4 = parse lamExprParse "error" "((\\x.x)((\\y.y)(\\y.y)))"
 
-expr5 = parse lamExprParse "error" "(\\x.\\y.y x)(\\z.u)"
-expr5' = parse lamExprParse "error" "(\\x.\\y.y x)(\\x.y)"
+-- expr5 = parse lamExprParse "error" "(\\x.\\y.y x)(\\z.u)"
+-- expr5' = parse lamExprParse "error" "(\\x.\\y.y x)(\\x.y)"
 
-expr6 = parse lamExprParse "error" "(\\x.x x) (\\z.u)"
-expr7 = parse lamExprParse "error" "\\x.(\\x.x y) x"
+-- expr6 = parse lamExprParse "error" "(\\x.x x) (\\z.u)"
+-- expr7 = parse lamExprParse "error" "\\x.(\\x.x y) x"
 
-expr8 = parse lamExprParse "error" "\\x.(\\y.x y) (\\x.y)"
+-- expr8 = parse lamExprParse "error" "\\x.(\\y.x y) (\\x.y)"
 
-expr9 = parse lamExprParse "error" "(\\x.(\\y.x y) (\\x.(\\y.x y) z))" -- Works!!!
+-- expr9 = parse lamExprParse "error" "(\\x.(\\y.x y) (\\x.(\\y.x y) z))" -- Works!!!
 
-expr10 = parse lamExprParse "error" "\\y.(\\z.\\y.z) (\\x.y)"   -- testing variable renaming, works
-substTest :: VarId -> Either a1 LamExpr -> Either a2 LamExpr -> LamExpr
-substTest var (Right e) (Right eMain) = subst var e eMain LocalVar   -- testing subst with substituting expr1 for "g" in expr3
-betaTest (Right e) = betaReduceTop e
-
-
+-- expr10 = parse lamExprParse "error" "\\y.(\\z.\\y.z) (\\x.y)"   -- testing variable renaming, works
+-- substTest :: VarId -> Either a1 LamExpr -> Either a2 LamExpr -> LamExpr
+-- substTest var (Right e) (Right eMain) = subst var e eMain LocalVar   -- testing subst with substituting expr1 for "g" in expr3
+-- betaTest (Right e) = betaReduceTop e
 
 
 
-test1 = parse parseTop "error" "\\f.\\x.fx"
 
-test2 = parse parseTop "error" "\\f.\\x.f(fx)"
 
-test3 = parse parseTop "error" "((\\x.x)((\\y.y)(\\y.y)))"
+-- test1 = parse parseTop "error" "\\f.\\x.fx"
 
-test4 = parse parseTop "error" "(\\x.x)((\\y.y)(\\y.y))"
+-- test2 = parse parseTop "error" "\\f.\\x.f(fx)"
 
-test5 = parse parseTop "error" "             (\\x.x) ((\\y.y  ) (  \\y.y)  )"
+-- test3 = parse parseTop "error" "((\\x.x)((\\y.y)(\\y.y)))"
 
-test6 = parse parseTop "error" "  (\\x.x ) (  (\\y.y)   (\\y.y  )  )  "
-test7 = parse parseTop "error" "x"
-test8 = parse parseTop "error" "  x  "
+-- test4 = parse parseTop "error" "(\\x.x)((\\y.y)(\\y.y))"
+
+-- test5 = parse parseTop "error" "             (\\x.x) ((\\y.y  ) (  \\y.y)  )"
+
+-- test6 = parse parseTop "error" "  (\\x.x ) (  (\\y.y)   (\\y.y  )  )  "
+-- test7 = parse parseTop "error" "x"
+-- test8 = parse parseTop "error" "  x  "
