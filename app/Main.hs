@@ -5,6 +5,7 @@ module Main where
 import System.IO
 
 import MyParser
+import MyInterpreter
 import Data.Map
 import Data.Maybe
 
