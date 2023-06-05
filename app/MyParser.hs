@@ -142,6 +142,8 @@ subst x e (Abstr var expr)
               freshVar = head (varList Data.List.\\ toList(allIn_e `union` allIn_expr)) -- new variable name for var (\var. ...)
               expr' = subst var (Var freshVar) expr -- replace all instances of var with freshVar
 
+
+-- Applies successive beta reduction in normal order
 betaReduceTop :: LamExpr -> LamExpr
 betaReduceTop expr = 
     let reducedExpr = betaReduce expr
@@ -149,6 +151,8 @@ betaReduceTop expr =
         then expr
         else betaReduce reducedExpr
 
+-- Performs all possible left-most beta reductions
+-- Not sure if this completely adheres to normal order reduction
 betaReduce :: LamExpr -> LamExpr
 betaReduce (Appl (Abstr x expr) e) = subst x e expr
 betaReduce (Appl left right) =
@@ -156,6 +160,22 @@ betaReduce (Appl left right) =
 betaReduce (Abstr x expr) = Abstr x (betaReduce expr)
 betaReduce expr = expr
 
+-- betaReduce :: LamExpr -> LamExpr
+-- betaReduce (Appl (Abstr x expr) e) =
+--     let substitutedExpr = subst x e expr
+--     in trace ("Reducing application with abstraction: " ++ show (Appl (Abstr x expr) e))
+--        $ trace ("Substituted expression: " ++ show substitutedExpr)
+--        $ substitutedExpr
+-- betaReduce (Appl left right) =
+--     let reducedLeft = betaReduce left
+--         reducedRight = betaReduce right
+--     in trace ("Reducing application: " ++ show (Appl reducedLeft reducedRight))
+--        $ Appl reducedLeft reducedRight
+-- betaReduce (Abstr x expr) =
+--     let reducedExpr = betaReduce expr
+--     in trace ("Reducing abstraction: " ++ show (Abstr x reducedExpr))
+--        $ Abstr x reducedExpr
+-- betaReduce expr = expr
 
 
 
@@ -171,9 +191,24 @@ expr3 = parse lamExprParse "error" "(\\f.f)((\\g.g)(\\k.g k))"
 free1 (Right expr) = freeVars expr
 all1 (Right expr) = allVars expr
 
-expr4 = parse lamExprParse "error" ""
+expr4 = parse lamExprParse "error" "((\\x.x)((\\y.y)(\\y.y)))"
 
+expr5 = parse lamExprParse "error" "(\\x.\\y.y x)(\\z.u)"
+expr5' = parse lamExprParse "error" "(\\x.\\y.y x)(\\x.y)"
+
+expr6 = parse lamExprParse "error" "(\\x.x x) (\\z.u)"
+expr7 = parse lamExprParse "error" "\\x.(\\x.x y) x"
+
+expr8 = parse lamExprParse "error" "\\x.(\\y.x y) (\\x.y)"
+
+expr9 = parse lamExprParse "error" "(\\x.(\\y.x y) (\\x.(\\y.x y) z))" -- Works!!!
+
+expr10 = parse lamExprParse "error" "\\y.(\\z.\\y.z) (\\x.y)"   -- testing variable renaming, works
+substTest :: VarId -> Either a1 LamExpr -> Either a2 LamExpr -> LamExpr
 substTest var (Right e) (Right eMain) = subst var e eMain   -- testing subst with substituting expr1 for "g" in expr3
+betaTest (Right e) = betaReduceTop e
+
+
 
 
 
