@@ -7,6 +7,7 @@ module MyParser
     , Statement(..)
     , LamExpr(..)
     , parseEntry
+    , betaReduceTop
     ) where
 
 import Text.Parsec
@@ -16,6 +17,7 @@ import System.IO
 
 import Data.Set
 import Data.List ((\\))
+-- import Data.Map
 
 type VarId = String     -- variable names inside lambda expression
 type ExprName = String  -- lambda expression names
@@ -27,6 +29,7 @@ data Statement = Expr LamExpr
 
 -- lambda expressions
 data LamExpr = Var VarId
+             | ExprSubst VarId
              | Abstr VarId LamExpr
              | Appl LamExpr LamExpr
              deriving(Show, Eq)
@@ -66,12 +69,24 @@ lamExprParse = do
   exprs <- many1 (spaces *> (parenParse <|> applParse <|> abstrParse <|> varParse))
   return (foldl1 Appl exprs)
 
--- parses a variable made up of a single character
+-- parses a local (single char) variable or an expression name ($...)
 varParse :: Parser LamExpr
-varParse = do
+varParse = localVarParse <|> exprSubstParse
+
+-- parses a variable made up of a single character
+localVarParse :: Parser LamExpr
+localVarParse = do
     var <- symLetter
     -- traceM $ "varParse: " ++ [var]
     return (Var [var])
+
+-- parses a variable name that is a name for a named expression
+exprSubstParse :: Parser LamExpr
+exprSubstParse = do
+    spaces
+    char '$'
+    var <- many1 letter
+    return (ExprSubst var)
 
 -- parses abstractions, single char variable names for now
 abstrParse :: Parser LamExpr
