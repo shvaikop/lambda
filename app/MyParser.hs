@@ -53,7 +53,7 @@ statementExprParse = do
 
 lamExprParse :: Parser LamExpr
 lamExprParse = do
-  exprs <- many1 (spaces *> (parenParse <|> applParse <|> abstrParse <|> varParse) <* spaces)
+  exprs <- many1 (spaces *> (parenParse <|> varParse  <|> abstrParse <|> applParse) <* spaces)
   return (foldl1 Appl exprs)
 
 -- parses a local (single char) variable or an expression name ($...)
