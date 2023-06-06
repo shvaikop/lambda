@@ -7,6 +7,7 @@ import Data.Set ( (\\), member, singleton, toList, union, Set )
 import Data.Maybe ()
 import Data.List ((\\))
 import Data.Map (Map, empty, lookup, member, (!), insert)
+import Debug.Trace
 
 import MyTypes
 
@@ -90,31 +91,19 @@ betaReduceTop :: LamExpr -> LamExpr
 betaReduceTop expr =
     let reducedExpr = betaReduce expr
     in if expr == reducedExpr
-        then expr
-        else betaReduce reducedExpr
+        then reducedExpr
+        else betaReduceTop reducedExpr
 
 -- Performs all possible left-most beta reductions
 -- Not sure if this completely adheres to normal order reduction
 betaReduce :: LamExpr -> LamExpr
-betaReduce (Appl (Abstr x expr) e) = subst x e expr LocalVar
+betaReduce arg@(Appl (Abstr x expr) e) = subst x e expr LocalVar
 betaReduce (Appl left right) =
+    -- let res = Appl (betaReduce left) (betaReduce right)
+    -- in trace ("Result1: " ++ show res) res
     Appl (betaReduce left) (betaReduce right)
-betaReduce (Abstr x expr) = Abstr x (betaReduce expr)
+betaReduce (Abstr x expr) = 
+    -- let res = Abstr x (betaReduce expr)
+    -- in trace ("Result2: " ++ show res) res
+    Abstr x (betaReduce expr)
 betaReduce expr = expr
-
--- betaReduce :: LamExpr -> LamExpr
--- betaReduce (Appl (Abstr x expr) e) =
---     let substitutedExpr = subst x e expr
---     in trace ("Reducing application with abstraction: " ++ show (Appl (Abstr x expr) e))
---        $ trace ("Substituted expression: " ++ show substitutedExpr)
---        $ substitutedExpr
--- betaReduce (Appl left right) =
---     let reducedLeft = betaReduce left
---         reducedRight = betaReduce right
---     in trace ("Reducing application: " ++ show (Appl reducedLeft reducedRight))
---        $ Appl reducedLeft reducedRight
--- betaReduce (Abstr x expr) =
---     let reducedExpr = betaReduce expr
---     in trace ("Reducing abstraction: " ++ show (Abstr x reducedExpr))
---        $ Abstr x reducedExpr
--- betaReduce expr = expr
