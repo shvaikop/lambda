@@ -34,6 +34,7 @@ executable project
     build-depends:    
         base ^>=4.16.4.0,
         parsec >= 3.1 && < 3.2,
+        directory >= 1 && < 2,
         containers 
     hs-source-dirs:   app
     default-language: Haskell2010
