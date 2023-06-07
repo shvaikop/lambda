@@ -9,40 +9,32 @@ import MyInterpreter
 import Data.Map ( empty, insert, Map )
 import Data.Maybe
 import System.Environment
+import Control.Monad
 
 
+processInput :: Map ExprName LamExpr -> String -> IO (Map ExprName LamExpr)
+processInput map input =
+    case parseEntry input of
+        Right (Assign name expr) -> do
+            putStrLn "Assignment"
+            return (insert name expr map)
+        Right (Expr expr) -> do
+            print $ betaReduceTop $ fromJust $ expandSubstsTop map expr
+            return map
+        Left err -> do
+            print err
+            return map
 
 processSTDIN :: Map ExprName LamExpr -> IO ()
-processSTDIN map = do 
+processSTDIN map = do
     putStr ">>> "
     hFlush stdout
     input <- getLine
-    case parseEntry input of
-        Right (Assign name expr) -> do
-            let map' = insert name expr map
-            putStrLn "Assignment"
-            processSTDIN map'
-        Right (Expr expr) -> do
-            print $ betaReduceTop $ fromJust $ expandSubstsTop map expr
-            processSTDIN map
-        Left err -> do
-            print err
-            processSTDIN map
+    map' <- processInput map input
+    processSTDIN map'
 
 processFIO :: Map ExprName LamExpr -> [String] -> IO ()
-processFIO map [] = return ()
-processFIO map (ln : rest) = do
-    case parseEntry ln of
-        Right (Assign name expr) -> do
-            let map' = insert name expr map
-            putStrLn "Assignment"
-            processFIO map' rest
-        Right (Expr expr) -> do
-            print $ betaReduceTop $ fromJust $ expandSubstsTop map expr
-            processFIO map rest
-        Left err -> do
-            print err
-            processFIO map rest
+processFIO map rest = foldM_ processInput map rest
 
 
 main :: IO ()
@@ -51,9 +43,9 @@ main = do
     args <- getArgs
     case args of
         [filename] -> do
-            isValid <- doesFileExist filename 
-            if isValid 
-                then do 
+            isValid <- doesFileExist filename
+            if isValid
+                then do
                     fileContent <- readFile filename
                     let fileLines = lines fileContent
                     processFIO empty fileLines
@@ -62,23 +54,3 @@ main = do
             processSTDIN empty
         _ -> do
             putStrLn "usage: cabal run [-- filename]"
-
-
--- "  (\x.x ) (  (  \y.y)   (\y.y  )  )  "
--- mainLoop :: Map ExprName LamExpr -> IO ()
--- mainLoop map = do
---     putStr ">>> "
---     hFlush stdout
---     input <- getLine
---     if input == "q" then putStrLn "Exiting"
---     else do
---         case parseEntry input of
---             Right (Assign name expr) -> do
---                 let map' = insert name expr map
---                 putStrLn "Assignment"
---                 mainLoop map'
---             Right (Expr expr) -> print $ betaReduceTop $ fromJust $ expandSubstsTop map expr
---             Left err -> print err
---         mainLoop map
-
--- processLine :: Bool -> String -> Map ExprName LamExpr -> IO ()
