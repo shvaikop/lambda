@@ -2,25 +2,35 @@
 -- {-# HLINT ignore "Use <$>" #-}
 module Main where
 
-import System.IO
-import System.Directory
+import System.IO ( hFlush, stdout )
+import System.Directory ( doesFileExist )
 import MyParser
 import MyInterpreter
 import Data.Map ( empty, insert, Map )
+-- import Data.Maybe
+import System.Environment ( getArgs )
+import Control.Monad ( foldM_ )
 import Data.Maybe
-import System.Environment
-import Control.Monad
 
 
 processInput :: Map ExprName LamExpr -> String -> IO (Map ExprName LamExpr)
 processInput map input =
     case parseEntry input of
         Right (Assign name expr) -> do
-            putStrLn "Assignment"
-            return (insert name expr map)
+            let exp_expr = expandSubstsTop map expr
+            case exp_expr of
+                Just expr' -> return (insert name (betaReduceTop expr') map)
+                Nothing -> do 
+                    print "Expression contains unknown variable"
+                    return map
+
         Right (Expr expr) -> do
-            print $ betaReduceTop $ fromJust $ expandSubstsTop map expr
+            let exp_expr = expandSubstsTop map expr
+            case exp_expr of
+                Just expr' -> print $ betaReduceTop expr'
+                Nothing -> print "Expression contains unknown variable"
             return map
+
         Left err -> do
             print err
             return map
