@@ -1,0 +1,15 @@
+zero = \f.\x.x
+one = \f.\x.f x
+succ = \n.\f.\x.f (n f x)
+two = $succ $one
+three = $succ $two
+plus = \m.\n.\f.\x.m f (n f x)
+five = $plus $two $three
+pred = \n.\f.\x.n (\g.\h.h (g f)) (\u.x) (\u.u)
+four = $pred $five
+$zero
+$one
+$two
+$three
+$four
+$five

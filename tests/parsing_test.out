@@ -1,0 +1,11 @@
+Up to date
+Welcome to Lambda Calculus Interpreter
+\f.\x.x
+\f.\x.f x
+\f.\x.(f) (f x)
+\f.\x.(f) ((f) (f x))
+\f.\x.(f) ((f) ((f) (f x)))
+\f.\x.(f) ((f) ((f) ((f) (f x))))
+"error" (line 1, column 3):
+unexpected " "
+expecting "."

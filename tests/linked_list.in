@@ -1,0 +1,19 @@
+true = \x.\y.x
+false = \x.\y.y
+pair = \x.\y.\f.f x y
+first = \p.p $true
+second = \p.p $false
+nil = \x.$true
+null = \p.p (\x.\y.$false)
+zero = \f.\x.x
+one = \f.\x.f x
+two = \f.\x.f (f x)
+three = \f.\x.f (f (f x))
+a = $pair $three $nil
+b = $pair $two $a
+c = $pair $one $b
+head = $pair $zero $c
+$first $head
+$first ($second $head)
+$first (  $second ($second $head)   )
+$first ($second ($second ($second $head)))

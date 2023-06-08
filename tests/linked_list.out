@@ -1,0 +1,6 @@
+Up to date
+Welcome to Lambda Calculus Interpreter
+\f.\x.x
+\f.\x.f x
+\f.\x.(f) (f x)
+\f.\x.(f) ((f) (f x))

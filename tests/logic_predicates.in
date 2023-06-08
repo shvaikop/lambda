@@ -1,0 +1,16 @@
+true = \x.\y.x
+false = \x.\y.y
+not = \p.p $false $true
+or = \p.\q.p p q
+and = \p.\q.p q p
+zero = \f.\x.x
+one = \f.\x.f x
+iszero = \n.n (\x.$false) $true
+$not $true
+$and $true $false
+$and $true $true
+$or $true $false
+$iszero $zero
+$iszero $one
+$or ($iszero $zero) ($iszero $one)
+$and ($iszero $zero) ($iszero $one)
