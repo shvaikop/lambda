@@ -99,11 +99,7 @@ betaReduceTop expr =
 betaReduce :: LamExpr -> LamExpr
 betaReduce arg@(Appl (Abstr x expr) e) = subst x e expr LocalVar
 betaReduce (Appl left right) =
-    -- let res = Appl (betaReduce left) (betaReduce right)
-    -- in trace ("Result1: " ++ show res) res
     Appl (betaReduce left) (betaReduce right)
 betaReduce (Abstr x expr) = 
-    -- let res = Abstr x (betaReduce expr)
-    -- in trace ("Result2: " ++ show res) res
     Abstr x (betaReduce expr)
 betaReduce expr = expr
