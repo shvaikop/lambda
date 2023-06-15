@@ -19,7 +19,7 @@ processInput map input =
         Right (Assign name expr) -> do
             let exp_expr = expandSubstsTop map expr
             case exp_expr of
-                Just expr' -> return (insert name (betaReduceTop expr') map)
+                Just expr' -> return (insert name expr' map)
                 Nothing -> do 
                     print "Expression contains unknown variable"
                     return map

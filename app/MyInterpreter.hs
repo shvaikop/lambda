@@ -95,11 +95,31 @@ betaReduceTop expr =
         else betaReduceTop reducedExpr
 
 -- Performs all possible left-most beta reductions
--- Not sure if this completely adheres to normal order reduction
 betaReduce :: LamExpr -> LamExpr
 betaReduce arg@(Appl (Abstr x expr) e) = subst x e expr LocalVar
 betaReduce (Appl left right) =
-    Appl (betaReduce left) (betaReduce right)
+    let left_reduced = betaReduce left
+        right_reduced = betaReduce right
+    in if left == left_reduced
+        then Appl left (betaReduce right)
+        else Appl left_reduced right
+    -- Appl (betaReduce left) (betaReduce right)
 betaReduce (Abstr x expr) = 
     Abstr x (betaReduce expr)
 betaReduce expr = expr
+
+
+-- Performs all possible left-most beta reductions
+-- betaReduce :: LamExpr -> LamExpr
+-- betaReduce arg@(Appl (Abstr x expr) e) =
+--     trace ("Reducing: " ++ show arg) $
+--     subst x e expr LocalVar
+-- betaReduce (Appl left right) =
+--     let reducedLeft = betaReduce left
+--         reducedRight = betaReduce right
+--     in trace ("Reducing: " ++ show (Appl reducedLeft reducedRight)) $
+--         Appl reducedLeft reducedRight
+-- betaReduce (Abstr x expr) =
+--     trace ("Reducing: " ++ show (Abstr x expr)) $
+--     Abstr x (betaReduce expr)
+-- betaReduce expr = expr
