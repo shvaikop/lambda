@@ -6,6 +6,7 @@ import System.IO ( hFlush, stdout )
 import System.Directory ( doesFileExist )
 import MyParser
 import MyInterpreter
+import MyTypes
 import Data.Map ( empty, insert, Map )
 -- import Data.Maybe
 import System.Environment ( getArgs )
@@ -13,7 +14,7 @@ import Control.Monad ( foldM_ )
 import Data.Maybe
 
 
-processInput :: Map ExprName LamExpr -> String -> IO (Map ExprName LamExpr)
+processInput :: Env -> String -> IO Env
 processInput map input =
     case parseEntry input of
         Right (Assign name expr) -> do
@@ -27,7 +28,7 @@ processInput map input =
         Right (Expr expr) -> do
             let exp_expr = expandSubstsTop map expr
             case exp_expr of
-                Just expr' -> print $ betaReduceTop expr'
+                Just expr' -> print $ betaReduceTop map expr'
                 Nothing -> print "Expression contains unknown variable"
             return map
 
@@ -35,7 +36,7 @@ processInput map input =
             print err
             return map
 
-processSTDIN :: Map ExprName LamExpr -> IO ()
+processSTDIN :: Env -> IO ()
 processSTDIN map = do
     putStr ">>> "
     hFlush stdout
@@ -43,7 +44,7 @@ processSTDIN map = do
     map' <- processInput map input
     processSTDIN map'
 
-processFIO :: Map ExprName LamExpr -> [String] -> IO ()
+processFIO :: Env -> [String] -> IO ()
 processFIO map rest = foldM_ processInput map rest
 
 
