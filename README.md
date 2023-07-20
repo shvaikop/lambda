@@ -1,1 +1,1 @@
-# Lambda calculus interpreter in Haskel
+# Lambda calculus interpreter in Haskell
